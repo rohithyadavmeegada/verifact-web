@@ -1,0 +1,55 @@
+# VeriFact Docker Compose — Development Environment
+# Usage: docker-compose up -d
+
+services:
+  # ── PostgreSQL ───────────────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: verifact-postgres
+    environment:
+      POSTGRES_USER: verifact
+      POSTGRES_PASSWORD: verifact_dev_password
+      POSTGRES_DB: verifact
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U verifact"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Redis ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: verifact-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Neo4j (Optional — for social graph analysis) ─────────────────────────
+  # neo4j:
+  #   image: neo4j:5-community
+  #   container_name: verifact-neo4j
+  #   environment:
+  #     NEO4J_AUTH: neo4j/verifact_neo4j_dev
+  #   ports:
+  #     - "7474:7474"
+  #     - "7687:7687"
+  #   volumes:
+  #     - neo4j_data:/data
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  # neo4j_data:
