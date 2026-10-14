@@ -10,24 +10,23 @@ import {
   FlaskConical, 
   Cpu, 
   ArrowRight, 
-  CheckCircle2, 
-  Clock, 
-  Database,
-  Layers,
-  Sparkles
+  CheckCircle2
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { getHistory, getResearchStats, getStoredUser, UserSession } from "@/lib/api";
+import { getHistory, getResearchStats, getStoredUser, UserSession, HistoryItem, ResearchStats } from "@/lib/api";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<UserSession | null>(null);
-  const [historyItems, setHistoryItems] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
+  const [stats, setStats] = useState<ResearchStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setUser(getStoredUser());
+    const timer = setTimeout(() => {
+      setUser(getStoredUser());
+    }, 0);
+
     async function loadData() {
       try {
         setLoading(true);
@@ -44,6 +43,8 @@ export default function DashboardPage() {
       }
     }
     loadData();
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (
@@ -147,7 +148,7 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
                         <span className="capitalize">{item.analysis_type}</span>
                         <span>•</span>
-                        <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                        <span>{item.created_at ? new Date(item.created_at).toLocaleDateString() : "Recently"}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">

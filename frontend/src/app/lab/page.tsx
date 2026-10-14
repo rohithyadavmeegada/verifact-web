@@ -1,29 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { 
-  Activity, 
   FlaskConical, 
   Database, 
   Play, 
   BarChart2, 
-  CheckCircle2, 
-  Download, 
-  Cpu, 
-  Scale, 
-  Layers, 
-  ArrowRight,
-  TrendingUp,
-  Clock
+  CheckCircle2
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { getDatasets, getResearchStats, getExperiments } from "@/lib/api";
+import { getDatasets, getResearchStats, DatasetItem, ResearchStats } from "@/lib/api";
 
 export default function ResearchLabPage() {
-  const [datasets, setDatasets] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [datasets, setDatasets] = useState<DatasetItem[]>([]);
+  const [stats, setStats] = useState<ResearchStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"datasets" | "experiments" | "metrics">("datasets");
 
@@ -192,23 +183,27 @@ export default function ResearchLabPage() {
                 Metadata, licenses, checksums, and record counts for reproducible research evaluation.
               </p>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {datasets.map((d) => (
-                  <div key={d.id || d.name} className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-white font-mono text-sm">{d.name}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-mono">
-                        v{d.version || "1.0"}
-                      </span>
+              {loading ? (
+                <div className="py-12 text-center text-xs text-slate-500 font-mono">Loading dataset registry...</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {datasets.map((d) => (
+                    <div key={d.id || d.name} className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white font-mono text-sm">{d.name}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 font-mono">
+                          v{d.version || "1.0"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 leading-relaxed">{d.description}</p>
+                      <div className="text-[11px] font-mono text-slate-500 pt-2 border-t border-slate-900 space-y-0.5">
+                        <div>Records: <span className="text-slate-300">{d.total_records ? d.total_records.toLocaleString() : "Documented"}</span></div>
+                        <div>License: <span className="text-slate-300">{d.license || "Research Use"}</span></div>
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-400 leading-relaxed">{d.description}</p>
-                    <div className="text-[11px] font-mono text-slate-500 pt-2 border-t border-slate-900 space-y-0.5">
-                      <div>Records: <span className="text-slate-300">{d.total_records ? d.total_records.toLocaleString() : "Documented"}</span></div>
-                      <div>License: <span className="text-slate-300">{d.license || "Research Use"}</span></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

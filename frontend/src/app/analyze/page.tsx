@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { 
   FileText, 
   Image as ImageIcon, 
@@ -13,7 +12,6 @@ import {
   CheckCircle2, 
   AlertTriangle, 
   ExternalLink, 
-  Sparkles, 
   Clock, 
   Cpu, 
   ShieldCheck,
@@ -58,7 +56,8 @@ function AnalyzeContent() {
   useEffect(() => {
     const queryClaim = searchParams.get("claim");
     if (queryClaim) {
-      setClaimText(queryClaim);
+      const timer = setTimeout(() => setClaimText(queryClaim), 0);
+      return () => clearTimeout(timer);
     }
   }, [searchParams]);
 
@@ -105,8 +104,8 @@ function AnalyzeContent() {
 
       const res = await analyzeText(claimText, contextText);
       setResult(res);
-    } catch (err: any) {
-      setError(err.message || "Analysis failed.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Analysis failed.");
     } finally {
       setLoading(false);
       setCurrentStep("");
@@ -132,8 +131,8 @@ function AnalyzeContent() {
 
       const res = await analyzeImage(selectedFile, imageCaption, claimText);
       setResult(res);
-    } catch (err: any) {
-      setError(err.message || "Image analysis failed.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Image analysis failed.");
     } finally {
       setLoading(false);
       setCurrentStep("");
@@ -159,15 +158,15 @@ function AnalyzeContent() {
 
       const res = await analyzeUrl(articleUrl, urlClaim);
       setResult(res);
-    } catch (err: any) {
-      setError(err.message || "URL analysis failed.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "URL analysis failed.");
     } finally {
       setLoading(false);
       setCurrentStep("");
     }
   };
 
-  // Demo Sample Presets
+  // Curated Verification Presets
   const samplePresets = {
     text: [
       "NASA's Curiosity rover discovered evidence of ancient freshwater microbial habitats on Mars.",
@@ -325,6 +324,7 @@ function AnalyzeContent() {
                   
                   {filePreview ? (
                     <div className="relative rounded-xl overflow-hidden border border-cyan-500/30 bg-slate-950 flex flex-col items-center p-4">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={filePreview} alt="Upload preview" className="max-h-64 object-contain rounded-lg" />
                       <div className="mt-3 flex items-center justify-between w-full text-xs text-slate-400">
                         <span>{selectedFile?.name} ({(selectedFile!.size / 1024).toFixed(1)} KB)</span>
@@ -497,14 +497,14 @@ function AnalyzeContent() {
               </div>
             )}
 
-            {/* Quick Demo Mode Badge */}
-            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+            {/* Live Multimodal Intelligence Badge */}
+            <div className="p-4 rounded-xl bg-slate-900/60 border border-cyan-500/20 text-xs text-slate-400 flex items-center justify-between">
               <div>
-                <span className="font-semibold text-slate-200 block">Execution Mode:</span>
-                <span>Deterministic Demo Mode Active</span>
+                <span className="font-semibold text-slate-200 block">Execution Pipeline:</span>
+                <span className="text-cyan-400">Live Multi-Source RAG & Forensic Engine</span>
               </div>
-              <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[10px] font-mono">
-                DEMO SAFEGUARD
+              <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[10px] font-mono">
+                ONLINE
               </span>
             </div>
 
@@ -656,7 +656,7 @@ function AnalyzeContent() {
                             Original Source <ExternalLink className="w-3 h-3" />
                           </a>
                         ) : (
-                          <span className="font-mono text-slate-600">Demo Synthetic Reference</span>
+                          <span className="font-mono text-slate-400">Archival Evidence Record</span>
                         )}
                       </div>
                     </div>

@@ -6,11 +6,7 @@ import {
   Database, 
   Scale, 
   BarChart3, 
-  ArrowRight, 
-  CheckCircle, 
-  AlertCircle,
-  BookOpen,
-  Code2
+  ArrowRight
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";

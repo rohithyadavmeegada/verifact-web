@@ -7,9 +7,11 @@ Classifies stance and domain credibility weights.
 from __future__ import annotations
 
 import logging
+import re
 import urllib.parse
 from typing import Dict, Any, List, Optional
 import httpx
+from bs4 import BeautifulSoup
 
 from app.core.config import get_settings
 from app.models.models import EvidenceRelation
@@ -72,7 +74,15 @@ class FactCheckRetriever:
             except Exception as e:
                 logger.warning("NewsAPI query failed: %s", e)
 
-        # 3. Live fallback: DuckDuckGo instant answer / web topics
+        # 3. Live Encyclopedic Evidence: Wikipedia Knowledge Graph (Open API)
+        if len(results) < limit:
+            try:
+                wiki_results = await self._query_wikipedia(query, limit - len(results))
+                results.extend(wiki_results)
+            except Exception as e:
+                logger.warning("Wikipedia retrieval failed: %s", e)
+
+        # 4. Live fallback: DuckDuckGo instant answer / web topics
         if len(results) < limit:
             try:
                 ddg_results = await self._query_duckduckgo(query, limit - len(results))
@@ -112,9 +122,9 @@ class FactCheckRetriever:
 
                     # Classify relation based on rating
                     if any(w in rating for w in ["false", "incorrect", "pants on fire", "hoax", "misleading"]):
-                        relation = EvidenceRelation.REFUTING
+                        relation = EvidenceRelation.CONTRADICTS
                     elif any(w in rating for w in ["true", "correct", "accurate", "confirmed"]):
-                        relation = EvidenceRelation.SUPPORTING
+                        relation = EvidenceRelation.SUPPORTS
                     else:
                         relation = EvidenceRelation.RELATED
 
@@ -172,6 +182,66 @@ class FactCheckRetriever:
                     "retrieval_source": "news_api",
                 })
 
+            return items
+
+    async def _query_wikipedia(self, query: str, limit: int) -> List[Dict[str, Any]]:
+        """Query Wikipedia API for encyclopedic and factual evidence."""
+        clean_q = re.sub(r"[^\w\s]", " ", query).strip()
+        url = "https://en.wikipedia.org/w/api.php"
+        params = {
+            "action": "query",
+            "list": "search",
+            "srsearch": clean_q,
+            "format": "json",
+            "utf8": "1",
+            "srlimit": limit,
+        }
+        headers = {
+            "User-Agent": "VeriFactResearchPlatform/1.0 (academic; verification-engine)"
+        }
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            resp = await client.get(url, params=params, headers=headers)
+            if resp.status_code != 200:
+                return []
+            data = resp.json()
+            search_items = data.get("query", {}).get("search", [])
+            items = []
+            for s in search_items:
+                raw_snippet = s.get("snippet", "")
+                clean_snippet = BeautifulSoup(raw_snippet, "html.parser").get_text()
+                title = s.get("title", "")
+                page_url = f"https://en.wikipedia.org/wiki/{urllib.parse.quote(title.replace(' ', '_'))}"
+                
+                neg_words = {
+                    "debunked", "false", "hoax", "incorrect", "disproven", "fictional", "conspiracy",
+                    "fabricated", "unfounded", "denied", "no evidence", "misinformation", "disinformation",
+                    "pseudoscience", "pseudoscientific", "urban legend", "myth"
+                }
+                pos_words = {
+                    "confirmed", "verified", "discovered", "discovery", "detected", "detection",
+                    "found", "established", "demonstrated", "observed", "published", "reports",
+                    "reported", "identified", "proven", "confirms"
+                }
+                text_to_check = f"{title.lower()} {clean_snippet.lower()}"
+                
+                if any(w in text_to_check for w in neg_words):
+                    relation = EvidenceRelation.CONTRADICTS
+                elif any(w in text_to_check for w in pos_words):
+                    relation = EvidenceRelation.SUPPORTS
+                else:
+                    relation = EvidenceRelation.RELATED
+                
+                items.append({
+                    "source_name": "Wikipedia Encyclopedia",
+                    "publisher": "Wikimedia Foundation",
+                    "source_url": page_url,
+                    "title": f"{title} (Factual Reference)",
+                    "snippet": clean_snippet,
+                    "relation": relation,
+                    "relevance_score": 0.88,
+                    "is_fact_check": False,
+                    "retrieval_source": "wikipedia_knowledge_graph",
+                })
             return items
 
     async def _query_duckduckgo(self, query: str, limit: int) -> List[Dict[str, Any]]:

@@ -44,10 +44,15 @@ app = FastAPI(
     description="Multimodal Deep Learning Framework for Real-Time, Explainable Fake News and Deepfake Detection",
     version="1.0.0",
     lifespan=lifespan,
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
+
+@app.get("/api/docs", include_in_schema=False)
+async def api_docs_redirect():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/docs")
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
 app.add_middleware(
@@ -106,6 +111,7 @@ async def public_config():
     return {
         "demo_mode": settings.demo_mode,
         "google_oauth_configured": bool(settings.google_client_id),
+        "google_client_id": settings.google_client_id if settings.google_client_id else None,
         "providers": {
             "gemini": settings.is_provider_configured("gemini"),
             "groq": settings.is_provider_configured("groq"),

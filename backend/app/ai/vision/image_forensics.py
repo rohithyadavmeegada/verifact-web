@@ -29,7 +29,10 @@ class ImageForensics:
     def initialize_clip(self) -> bool:
         """Attempt to load HuggingFace OpenCLIP / CLIP model."""
         try:
-            from transformers import CLIPProcessor, CLIPModel
+            import importlib
+            transformers = importlib.import_module("transformers")
+            CLIPProcessor = getattr(transformers, "CLIPProcessor")
+            CLIPModel = getattr(transformers, "CLIPModel")
 
             self._clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
             self._clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
@@ -186,7 +189,8 @@ class ImageForensics:
             return None
 
         try:
-            import torch
+            import importlib
+            torch = importlib.import_module("torch")
 
             inputs = self._clip_processor(
                 text=[caption],

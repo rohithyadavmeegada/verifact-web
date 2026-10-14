@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   ShieldCheck, 
   Cpu, 
@@ -11,26 +11,29 @@ import {
   History, 
   User, 
   LogOut, 
-  ExternalLink,
-  Menu,
-  X,
-  Sparkles
+  Menu, 
+  X, 
+  Sparkles 
 } from "lucide-react";
 import { getStoredUser, clearStoredToken, UserSession } from "@/lib/api";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [user, setUser] = useState<UserSession | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    setUser(getStoredUser());
+    const timer = setTimeout(() => {
+      setUser(getStoredUser());
+    }, 0);
+    return () => clearTimeout(timer);
   }, [pathname]);
 
   const handleLogout = () => {
     clearStoredToken();
     setUser(null);
-    window.location.href = "/";
+    router.push("/");
   };
 
   const navLinks = [
@@ -85,10 +88,10 @@ export default function Navbar() {
 
         {/* Right CTA / User State */}
         <div className="hidden md:flex items-center gap-3">
-          {/* Provider / Demo Active Pill */}
+          {/* Provider / Engine Status Pill */}
           <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Demo AI Engine
+            Live AI Engine
           </div>
 
           {user ? (
@@ -96,13 +99,8 @@ export default function Navbar() {
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/60 border border-white/10 text-xs">
                 <User className="w-3.5 h-3.5 text-cyan-400" />
                 <span className="text-slate-200 font-medium">
-                  {user.is_demo ? "Guest Researcher" : user.name || user.email}
+                  {user.name || user.email || "Researcher"}
                 </span>
-                {user.is_demo && (
-                  <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
-                    DEMO
-                  </span>
-                )}
               </div>
               <button
                 onClick={handleLogout}
@@ -118,7 +116,7 @@ export default function Navbar() {
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-sm font-semibold shadow-md shadow-cyan-500/20 hover:shadow-cyan-500/40 transition-all duration-300"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              Sign In / Demo
+              Sign In / Guest
             </Link>
           )}
         </div>
@@ -173,7 +171,7 @@ export default function Navbar() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="block text-center w-full py-2 rounded-lg bg-cyan-600 text-white text-sm font-semibold"
               >
-                Sign In / Guest Demo
+                Sign In / Guest Access
               </Link>
             )}
           </div>

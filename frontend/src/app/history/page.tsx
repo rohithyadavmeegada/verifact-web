@@ -10,17 +10,14 @@ import {
   Image as ImageIcon, 
   Globe, 
   ArrowRight, 
-  Calendar, 
-  Filter,
-  CheckCircle2,
-  AlertTriangle
+  Filter
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { getHistory, createGuestSession, getStoredToken } from "@/lib/api";
+import { getHistory, createGuestSession, getStoredToken, HistoryItem } from "@/lib/api";
 
 export default function HistoryPage() {
-  const [historyItems, setHistoryItems] = useState<any[]>([]);
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");

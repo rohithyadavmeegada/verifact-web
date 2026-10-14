@@ -32,8 +32,11 @@ class ClaimAnalyzer:
     def initialize(self) -> bool:
         """Attempt to load real HuggingFace DeBERTa model if installed."""
         try:
-            import torch
-            from transformers import AutoTokenizer, AutoModelForSequenceClassification
+            import importlib
+            torch = importlib.import_module("torch")
+            transformers = importlib.import_module("transformers")
+            AutoTokenizer = getattr(transformers, "AutoTokenizer")
+            AutoModelForSequenceClassification = getattr(transformers, "AutoModelForSequenceClassification")
 
             self._device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
             self._tokenizer = AutoTokenizer.from_pretrained(self.model_name)
@@ -80,7 +83,8 @@ class ClaimAnalyzer:
 
     def _infer_transformers(self, claim: str, evidence_texts: List[str]) -> Dict[str, Any]:
         """Run real forward pass through DeBERTa-v3 sequence classification."""
-        import torch
+        import importlib
+        torch = importlib.import_module("torch")
 
         best_entailment = 0.0
         best_contradiction = 0.0
@@ -172,14 +176,25 @@ class ClaimAnalyzer:
         supporting_evidence = 0
         total_evidence = len(evidence_texts)
 
-        refute_keywords = {"false", "hoax", "debunked", "unproven", "misleading", "incorrect", "denied", "fabricated"}
-        support_keywords = {"confirmed", "verified", "true", "accurate", "official", "evidence shows", "substantiated"}
+        refute_keywords = {"false", "hoax", "debunked", "unproven", "misleading", "incorrect", "denied", "fabricated", "disproven", "fictional", "conspiracy", "unfounded", "no evidence"}
+        support_keywords = {"confirmed", "verified", "true", "accurate", "official", "evidence shows", "substantiated", "discovered", "discovery", "detected", "detection", "found", "established", "demonstrated", "observed", "published", "reports", "reported", "identified", "proven", "confirms"}
+
+        # Extract salient entities/tokens from claim (words > 3 chars, not common stopwords)
+        stopwords = {"about", "above", "after", "again", "against", "all", "and", "any", "are", "because", "been", "before", "being", "below", "between", "both", "but", "by", "could", "did", "does", "doing", "down", "during", "each", "few", "for", "from", "further", "had", "has", "have", "having", "here", "how", "into", "more", "most", "other", "our", "out", "over", "same", "should", "some", "such", "than", "that", "the", "their", "theirs", "them", "then", "there", "these", "they", "this", "those", "through", "too", "under", "until", "very", "was", "were", "what", "when", "where", "which", "while", "who", "whom", "why", "with"}
+        claim_keywords = [w for w in re.findall(r"\b[a-zA-Z0-9_\-]{4,}\b", claim_lower) if w not in stopwords]
 
         for ev in evidence_texts:
             ev_lower = ev.lower()
-            if any(k in ev_lower for k in refute_keywords):
+            has_refute = any(k in ev_lower for k in refute_keywords)
+            has_support = any(k in ev_lower for k in support_keywords)
+
+            # Check overlap of claim entities in this evidence premise
+            overlap_count = sum(1 for kw in claim_keywords if kw in ev_lower)
+            high_overlap = overlap_count >= max(2, len(claim_keywords) * 0.4)
+
+            if has_refute:
                 contradiction_evidence += 1
-            if any(k in ev_lower for k in support_keywords):
+            elif (has_support or high_overlap) and not has_refute:
                 supporting_evidence += 1
 
         if total_evidence > 0:

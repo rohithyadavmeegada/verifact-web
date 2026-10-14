@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import time
 import uuid
+import urllib.parse
 from datetime import datetime, timezone
 from typing import Optional
+import httpx
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -84,15 +86,8 @@ class AnalysisService:
             analysis.status = AnalysisStatus.PROCESSING
             await self.db.flush()
 
-            # If user explicitly requested demo mode or settings force demo mode
-            if analysis.is_demo:
-                return await self._process_demo(analysis, start_time)
-
-            if settings.enable_real_ai or settings.enable_local_ai or not settings.demo_mode:
-                return await self._process_real_ai(analysis, start_time)
-
-            # Fallback to demo mode
-            return await self._process_demo(analysis, start_time)
+            # Execute full real-time multimodal verification pipeline
+            return await self._process_real_ai(analysis, start_time)
 
         except Exception as e:
             analysis.status = AnalysisStatus.FAILED
@@ -106,11 +101,20 @@ class AnalysisService:
         """Execute full production multimodal deep learning pipeline."""
         claim = analysis.claim_text or analysis.caption or analysis.source_url or ""
         warnings = []
+        evidence_snippets: list[str] = []
 
-        # 1. Retrieval: Fetch evidence from Google Fact Check / NewsAPI / DuckDuckGo
+        # If URL analysis, scrape live page content and headline
+        if analysis.analysis_type == AnalysisType.URL and analysis.source_url:
+            scraped = await self._scrape_url(analysis.source_url)
+            if scraped.get("title"):
+                claim = scraped["title"]
+                analysis.claim_text = claim
+            if scraped.get("snippet"):
+                evidence_snippets.append(f"{scraped.get('domain', 'Article')}: {scraped['snippet']}")
+
+        # 1. Retrieval: Fetch live evidence from Google Fact Check / NewsAPI / Wikipedia / DuckDuckGo
         retrieved_raw = await fact_retriever.retrieve_evidence(claim, limit=5)
         evidence_records: list[Evidence] = []
-        evidence_snippets: list[str] = []
 
         for item in retrieved_raw:
             ev = Evidence(
@@ -132,8 +136,8 @@ class AnalysisService:
         await self.db.flush()
 
         # Compute evidence score based on supporting vs refuting evidence
-        refuting_count = sum(1 for e in evidence_records if e.relation == EvidenceRelation.REFUTING)
-        supporting_count = sum(1 for e in evidence_records if e.relation == EvidenceRelation.SUPPORTING)
+        refuting_count = sum(1 for e in evidence_records if str(e.relation).lower() in ("evidencerelation.contradicts", "contradicts", "refuting"))
+        supporting_count = sum(1 for e in evidence_records if str(e.relation).lower() in ("evidencerelation.supports", "supports", "supporting"))
 
         if refuting_count > 0:
             evidence_score = max(15.0, 45.0 - (refuting_count * 15.0))
@@ -269,7 +273,7 @@ class AnalysisService:
                 title=e.title,
                 snippet=e.snippet,
                 published_at=e.published_at,
-                relation=e.relation.value if e.relation else None,
+                relation=e.relation.value if hasattr(e.relation, "value") else (str(e.relation) if e.relation else None),
                 relevance_score=e.relevance_score,
                 is_fact_check=e.is_fact_check,
             )
@@ -278,14 +282,14 @@ class AnalysisService:
 
         return AnalysisResponse(
             id=str(analysis.id),
-            analysis_type=analysis.analysis_type.value,
+            analysis_type=analysis.analysis_type.value if hasattr(analysis.analysis_type, "value") else str(analysis.analysis_type),
             status=AnalysisStatus.COMPLETED.value,
             is_demo=False,
             claim_text=analysis.claim_text,
             source_url=analysis.source_url,
             caption=analysis.caption,
             trust_score=analysis.trust_score,
-            verdict=verdict.value,
+            verdict=verdict.value if hasattr(verdict, "value") else str(verdict),
             confidence=confidence,
             is_calibrated=True,
             text_result=ModalityResult(**text_result_data),
@@ -491,4 +495,37 @@ class AnalysisService:
 
         await self.db.flush()
         return evidence_items
+
+    async def _scrape_url(self, url: str) -> dict:
+        """Fetch live web article and extract headline and snippet."""
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        try:
+            async with httpx.AsyncClient(timeout=8.0, follow_redirects=True) as client:
+                resp = await client.get(url, headers=headers)
+                if resp.status_code == 200:
+                    from bs4 import BeautifulSoup
+                    soup = BeautifulSoup(resp.text, "html.parser")
+                    title = ""
+                    og_title = soup.find("meta", property="og:title")
+                    if og_title and og_title.get("content"):
+                        title = str(og_title["content"]).strip()
+                    elif soup.title and soup.title.string:
+                        title = soup.title.string.strip()
+
+                    desc = ""
+                    og_desc = soup.find("meta", property="og:description")
+                    if og_desc and og_desc.get("content"):
+                        desc = str(og_desc["content"]).strip()
+                    else:
+                        meta_desc = soup.find("meta", attrs={"name": "description"})
+                        if meta_desc and meta_desc.get("content"):
+                            desc = str(meta_desc["content"]).strip()
+
+                    domain = urllib.parse.urlparse(url).netloc
+                    return {"title": title, "snippet": desc, "domain": domain}
+        except Exception:
+            pass
+        return {}
 

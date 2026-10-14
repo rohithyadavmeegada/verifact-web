@@ -36,6 +36,25 @@ async def test_public_config():
 
 
 @pytest.mark.asyncio
+async def test_google_auth_workflow():
+    """Verify Google authentication endpoint with token and profile."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        payload = {
+            "token": "dev_google_token",
+            "email": "test.google@verifact.ai",
+            "name": "Test Google User",
+        }
+        res = await client.post("/api/v1/auth/google", json=payload)
+        assert res.status_code == 200
+        data = res.json()
+        assert data["access_token"] is not None
+        assert data["user"]["email"] == "test.google@verifact.ai"
+        assert data["user"]["role"] == "user"
+
+
+@pytest.mark.asyncio
 async def test_guest_login_and_claim_analysis():
     """Verify guest session creation and text claim analysis workflow."""
     async with AsyncClient(
@@ -47,7 +66,7 @@ async def test_guest_login_and_claim_analysis():
         guest_data = guest_res.json()
         token = guest_data["access_token"]
         assert token is not None
-        assert guest_data["user"]["is_demo"] is True
+        assert guest_data["user"]["is_demo"] is False
 
         headers = {"Authorization": f"Bearer {token}"}
 
@@ -75,7 +94,7 @@ async def test_guest_login_and_claim_analysis():
             "insufficient_evidence",
         ]
         assert len(result["evidence_items"]) > 0
-        assert result["is_demo"] is True
+        assert result["is_demo"] is False
 
         # 4. Check analysis history
         history_res = await client.get("/api/v1/history", headers=headers)

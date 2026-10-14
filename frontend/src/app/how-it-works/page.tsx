@@ -10,10 +10,8 @@ import {
   BrainCircuit, 
   Scale, 
   ArrowRight, 
-  CheckCircle, 
-  AlertTriangle,
   Cpu,
-  ArrowDown
+  LucideIcon
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -23,7 +21,7 @@ export default function HowItWorksPage() {
 
   const modules: Record<string, {
     title: string;
-    icon: any;
+    icon: LucideIcon;
     tag: string;
     summary: string;
     inputs: string[];

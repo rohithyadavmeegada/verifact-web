@@ -32,7 +32,7 @@ export interface ModalityResult {
   score?: number;
   confidence?: number;
   available: boolean;
-  details: Record<string, any>;
+  details: Record<string, string | number | boolean | null | undefined>;
   warnings: string[];
 }
 
@@ -144,6 +144,21 @@ export async function createGuestSession(): Promise<{ user: UserSession; access_
   return data;
 }
 
+export async function loginWithGoogle(
+  token: string,
+  email?: string,
+  name?: string,
+  avatar_url?: string
+): Promise<{ user: UserSession; access_token: string }> {
+  const data = await request<{ user: UserSession; access_token: string }>("/api/v1/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ token, email, name, avatar_url }),
+  });
+  setStoredToken(data.access_token);
+  setStoredUser(data.user);
+  return data;
+}
+
 export async function getCurrentSession(): Promise<UserSession | null> {
   const token = getStoredToken();
   if (!token) return null;
@@ -196,7 +211,7 @@ export async function getAnalysis(id: string): Promise<AnalysisRecord> {
   return request<AnalysisRecord>(`/api/v1/analyze/${id}`);
 }
 
-export async function getHistory(): Promise<Array<{
+export interface HistoryItem {
   id: string;
   analysis_type: string;
   status: string;
@@ -205,12 +220,13 @@ export async function getHistory(): Promise<Array<{
   verdict?: string;
   is_demo: boolean;
   created_at?: string;
-}>> {
+}
+
+export async function getHistory(): Promise<HistoryItem[]> {
   return request("/api/v1/history");
 }
 
-// Research Lab API
-export async function getDatasets(): Promise<Array<{
+export interface DatasetItem {
   id: string;
   name: string;
   version?: string;
@@ -221,27 +237,33 @@ export async function getDatasets(): Promise<Array<{
   is_downloaded: boolean;
   split_info?: Record<string, number>;
   label_definitions?: Record<string, string>;
-}>> {
+}
+
+// Research Lab API
+export async function getDatasets(): Promise<DatasetItem[]> {
   return request("/api/v1/research/datasets");
 }
 
-export async function getExperiments(): Promise<any[]> {
+export async function getExperiments(): Promise<Record<string, unknown>[]> {
   return request("/api/v1/research/experiments");
 }
 
-export async function getResearchStats(): Promise<{
+export interface ResearchStats {
   total_analyses: number;
   completed_analyses: number;
   average_processing_time_ms: number | null;
   total_experiments: number;
   datasets_registered: number;
-}> {
+}
+
+export async function getResearchStats(): Promise<ResearchStats> {
   return request("/api/v1/research/stats");
 }
 
 export async function getPublicConfig(): Promise<{
   demo_mode: boolean;
   google_oauth_configured: boolean;
+  google_client_id?: string | null;
   providers: Record<string, boolean>;
   features: Record<string, boolean>;
 }> {

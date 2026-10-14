@@ -92,8 +92,8 @@ class Settings(BaseSettings):
     neo4j_password: str = ""
 
     # ── Application Modes ────────────────────────────────────────────────────
-    demo_mode: bool = True
-    enable_real_ai: bool = False
+    demo_mode: bool = False
+    enable_real_ai: bool = True
     enable_local_ai: bool = False
 
     # ── Rate Limiting ────────────────────────────────────────────────────────

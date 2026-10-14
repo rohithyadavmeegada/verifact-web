@@ -12,24 +12,19 @@ interface TrustSphere3DProps {
 export default function TrustSphere3D({ score = 75, className = "", size = 420 }: TrustSphere3DProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [webGLSupported, setWebGLSupported] = useState<boolean>(true);
-  const [reducedMotion, setReducedMotion] = useState<boolean>(false);
 
   useEffect(() => {
-    // Check reduced motion preference
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mediaQuery.matches);
-
     // Check WebGL availability
     try {
       const canvas = document.createElement("canvas");
       const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
       if (!gl) {
-        setWebGLSupported(false);
-        return;
+        const timer = setTimeout(() => setWebGLSupported(false), 0);
+        return () => clearTimeout(timer);
       }
-    } catch (e) {
-      setWebGLSupported(false);
-      return;
+    } catch {
+      const timer = setTimeout(() => setWebGLSupported(false), 0);
+      return () => clearTimeout(timer);
     }
 
     if (!mountRef.current) return;
@@ -132,7 +127,8 @@ export default function TrustSphere3D({ score = 75, className = "", size = 420 }
       targetX += (mouseX - targetX) * 0.05;
       targetY += (mouseY - targetY) * 0.05;
 
-      const speedFactor = mediaQuery.matches ? 0 : 1;
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const speedFactor = prefersReducedMotion ? 0 : 1;
 
       cage.rotation.y = elapsedTime * 0.15 * speedFactor + targetX * 0.4;
       cage.rotation.x = elapsedTime * 0.1 * speedFactor + targetY * 0.3;

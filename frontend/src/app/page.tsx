@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { 
-  ShieldCheck, 
   Search, 
   Cpu, 
   Layers, 
@@ -14,12 +13,8 @@ import {
   FileText, 
   Image as ImageIcon, 
   Globe, 
-  Activity, 
-  FlaskConical,
-  Scale,
-  BrainCircuit,
-  Lock,
-  ChevronRight
+  Scale, 
+  BrainCircuit
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -52,7 +47,7 @@ export default function Home() {
                 {/* Academic Pill */}
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass-panel border border-cyan-500/30 text-xs font-mono text-cyan-300">
                   <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-                  B.Tech CSE Research Project • Multimodal Fact Verification
+                  Multimodal Fact Verification Engine • Production AI Intelligence
                 </div>
 
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
@@ -70,7 +65,7 @@ export default function Home() {
                     className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white font-semibold shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:-translate-y-0.5 transition-all duration-300"
                   >
                     <Search className="w-4 h-4" />
-                    Analyze a Claim
+                    Verify a Claim
                   </Link>
 
                   <Link
@@ -78,15 +73,15 @@ export default function Home() {
                     className="flex items-center gap-2 px-6 py-3.5 rounded-xl glass-panel glass-panel-hover text-slate-200 font-semibold border border-white/10"
                   >
                     <Cpu className="w-4 h-4 text-cyan-400" />
-                    Explore Architecture
+                    System Pipeline
                   </Link>
 
                   <Link
-                    href="/login"
+                    href="/dashboard"
                     className="flex items-center gap-2 px-5 py-3.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 text-cyan-300 font-mono text-sm border border-cyan-500/20"
                   >
                     <Sparkles className="w-4 h-4" />
-                    Open Demo Mode
+                    Live Dashboard
                   </Link>
                 </div>
 
@@ -135,7 +130,7 @@ export default function Home() {
                 </p>
               </div>
               <span className="text-xs px-2.5 py-1 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono">
-                Interactive Preview
+                Live Evaluation Sandbox
               </span>
             </div>
 
@@ -346,7 +341,7 @@ export default function Home() {
                   No Fabricated Citations
                 </h4>
                 <p className="text-xs leading-relaxed">
-                  All source citations are retrieved from authentic fact-check tools or news APIs with live URLs and verified publishers. Simulated demo results are clearly isolated.
+                  All source citations are retrieved from authentic fact-check registries, encyclopedic knowledge graphs, and live web sources with verified publishers and permanent source URLs.
                 </p>
               </div>
             </div>

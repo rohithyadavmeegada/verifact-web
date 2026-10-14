@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck, Code2, BookOpen, Terminal, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Terminal, CheckCircle2 } from "lucide-react";
 
 export default function Footer() {
   return (

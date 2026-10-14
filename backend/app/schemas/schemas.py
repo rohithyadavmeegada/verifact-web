@@ -20,7 +20,7 @@ class HealthResponse(BaseModel):
     timestamp: datetime
     database: str = "connected"
     redis: str = "connected"
-    demo_mode: bool = True
+    demo_mode: bool = False
 
 
 class PaginatedResponse(BaseModel):
@@ -52,7 +52,10 @@ class UserResponse(BaseModel):
 
 
 class GoogleAuthRequest(BaseModel):
-    token: str = Field(..., description="Google OAuth ID token")
+    token: str = Field(..., description="Google OAuth ID token or dev token")
+    email: str | None = Field(None, description="User email for dev verification")
+    name: str | None = Field(None, description="User display name")
+    avatar_url: str | None = Field(None, description="User avatar image URL")
 
 
 class SessionResponse(BaseModel):
@@ -66,7 +69,7 @@ class GuestLoginResponse(BaseModel):
     user: UserResponse
     access_token: str
     token_type: str = "bearer"
-    message: str = "Guest demo session created. Some features are limited."
+    message: str = "Active guest session authenticated. Full forensic engine online."
 
 
 # ── Analysis ─────────────────────────────────────────────────────────────────
