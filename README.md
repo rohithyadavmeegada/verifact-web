@@ -101,14 +101,30 @@ graph TD
 ### 1. Clone & Configuration
 ```bash
 git clone https://github.com/rohithyadavmeegada/verifact-web.git
-cd veriifact
+cd verifact-web
 
-# Copy environment configuration and fill in your API keys
+# Copy environment configuration and configure API keys
 cp .env.example .env
 ```
 
-### 2. Backend Setup
-The backend automatically falls back to embedded SQLite when PostgreSQL is unavailable.
+### 2. Quickstart with Unified Launcher
+VeriFact includes a unified launcher script that spins up both the FastAPI backend and Next.js frontend concurrently:
+
+```bash
+chmod +x start.sh
+./start.sh
+```
+
+- **Frontend UI**: [http://localhost:3000](http://localhost:3000)
+- **FastAPI Backend**: [http://localhost:8000](http://localhost:8000)
+- **Interactive Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+---
+
+### 3. Manual Component Setup
+
+#### Backend Setup
+The backend automatically defaults to embedded SQLite (`verifact.db`) with zero setup required if PostgreSQL is not active:
 
 ```bash
 cd backend
@@ -120,20 +136,21 @@ source venv/bin/activate          # Windows: venv\Scripts\activate
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the full test suite (20 tests)
+# Run the complete test suite (20 tests)
 pytest tests/ -v
 
-# Launch development server
+# Launch FastAPI development server
 uvicorn app.main:app --reload --port 8000
 ```
 
 | Endpoint | Description |
 |:--|:--|
 | `http://localhost:8000/docs` | Swagger UI (interactive API explorer) |
-| `http://localhost:8000/api/health` | Liveness probe with DB latency |
-| `http://localhost:8000/api/ready` | Readiness probe |
+| `http://localhost:8000/api/health` | Liveness probe with DB latency telemetry |
+| `http://localhost:8000/api/ready` | Kubernetes readiness probe |
+| `http://localhost:8000/api/v1/auth/guest` | Instant guest authentication token |
 
-### 3. Frontend Setup
+#### Frontend Setup
 ```bash
 cd frontend
 
@@ -141,11 +158,22 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:3000** in your browser.
+---
 
-### 4. (Optional) Docker — PostgreSQL & Redis
+### 4. Application Pages & Interfaces
+
+| Route | Interface | Key Capabilities |
+|:--|:--|:--|
+| `/` | **Landing & 3D Visualizer** | Interactive Three.js WebGL Trust Sphere, live statistics, architecture overview |
+| `/analyze` | **Multimodal Verification** | Text claim NLI, image ELA forensics & EXIF detection, URL scraping, social graph diffusion |
+| `/lab` | **Research Laboratory** | Academic benchmark datasets (LIAR, FakeNewsNet, Fakeddit), ablation studies, CSV/JSON audit export |
+| `/admin/providers`| **Provider Management** | Status dashboard for Gemini, Groq, Google Fact Check, NewsAPI, and Ollama |
+
+---
+
+### 5. (Optional) Full-Stack Infrastructure with Docker
 ```bash
-docker-compose up -d          # Starts postgres:16 + redis:7-alpine
+docker-compose up -d          # Provisions PostgreSQL 16 + Redis 7-alpine
 ```
 
 ---
