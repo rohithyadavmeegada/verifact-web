@@ -32,7 +32,9 @@ build/
 *.tsbuildinfo
 
 # ── Data ─────────────────────────────────────────────────────────────────────
-models/
+/models/
+backend/models/
+!backend/app/models/
 uploads/
 datasets/
 *.pt
