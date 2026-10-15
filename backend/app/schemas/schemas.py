@@ -217,6 +217,7 @@ class FeedbackResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    status: str = "success"
     analysis_id: str
     rating: int | None = None
     is_correct: bool | None = None

@@ -2,15 +2,18 @@
 VeriFact Backend — Main FastAPI Application
 """
 
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app.core.config import get_settings
-from app.core.database import init_db
+from app.core.database import init_db, engine
+from app.core.rate_limit import RateLimitMiddleware
 
 settings = get_settings()
 
@@ -55,12 +58,21 @@ async def api_docs_redirect():
     return RedirectResponse(url="/docs")
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
+allowed_origins = list(set(settings.cors_origins + [settings.app_url, "http://localhost:3000", "http://127.0.0.1:3000"]))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# ── Rate Limiting ────────────────────────────────────────────────────────────
+app.add_middleware(
+    RateLimitMiddleware,
+    max_requests=max(60, settings.rate_limit_requests_per_minute * 4),
+    window_seconds=60,
 )
 
 
@@ -93,16 +105,55 @@ app.include_router(research_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
 
 
-# ── Health Check ─────────────────────────────────────────────────────────────
+# ── Health & Readiness Probes ───────────────────────────────────────────────
 @app.get("/api/health")
 async def health_check():
-    """Public health check endpoint."""
-    return {
-        "status": "healthy",
-        "version": "1.0.0",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "demo_mode": settings.demo_mode,
-    }
+    """Public health check endpoint reporting real database status and latency."""
+    db_connected = False
+    db_latency_ms = None
+    try:
+        t0 = time.time()
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        db_latency_ms = round((time.time() - t0) * 1000, 2)
+        db_connected = True
+    except Exception:
+        db_connected = False
+
+    status_code = status.HTTP_200_OK if db_connected else status.HTTP_503_SERVICE_UNAVAILABLE
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": "healthy" if db_connected else "degraded",
+            "version": "1.0.0",
+            "environment": settings.app_env,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "database": {
+                "status": "connected" if db_connected else "disconnected",
+                "latency_ms": db_latency_ms,
+            },
+            "providers": {
+                "gemini": settings.is_provider_configured("gemini"),
+                "groq": settings.is_provider_configured("groq"),
+                "fact_check": settings.is_provider_configured("fact_check"),
+                "news": settings.is_provider_configured("news"),
+            },
+        },
+    )
+
+
+@app.get("/api/ready")
+async def readiness_check():
+    """Readiness probe for zero-downtime deployments."""
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return {"status": "ready", "ready": True}
+    except Exception:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "unready", "ready": False, "error": "Database is unreachable"},
+        )
 
 
 @app.get("/api/v1/config/public")

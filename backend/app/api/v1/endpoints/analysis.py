@@ -278,6 +278,7 @@ async def submit_feedback(
 
     return FeedbackResponse(
         id=str(feedback.id),
+        status="success",
         analysis_id=str(feedback.analysis_id),
         rating=feedback.rating,
         is_correct=feedback.is_correct,

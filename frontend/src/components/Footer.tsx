@@ -44,7 +44,7 @@ export default function Footer() {
           <h4 className="text-xs uppercase tracking-wider font-semibold text-slate-200 mb-3 font-mono">Resources</h4>
           <ul className="space-y-2 text-sm">
             <li><Link href="/admin/providers" className="hover:text-cyan-300 transition-colors">API Provider Health</Link></li>
-            <li><Link href="http://localhost:8000/api/docs" target="_blank" className="hover:text-cyan-300 transition-colors flex items-center gap-1">FastAPI Swagger <Terminal className="w-3 h-3" /></Link></li>
+            <li><Link href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/docs`} target="_blank" rel="noopener noreferrer" className="hover:text-cyan-300 transition-colors flex items-center gap-1">FastAPI Swagger <Terminal className="w-3 h-3" /></Link></li>
             <li><span className="text-slate-500 cursor-not-allowed">Academic Paper (Draft)</span></li>
             <li><Link href="/research" className="hover:text-cyan-300 transition-colors">Dataset Benchmarks</Link></li>
           </ul>

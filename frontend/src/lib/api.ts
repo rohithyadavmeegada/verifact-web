@@ -260,6 +260,20 @@ export async function getExperiments(): Promise<Record<string, unknown>[]> {
   return request("/api/v1/research/experiments");
 }
 
+export async function createExperiment(params: {
+  name: string;
+  description?: string;
+  dataset_id?: string;
+  pipeline_components: string[];
+  hyperparameters?: Record<string, unknown>;
+  random_seed?: number;
+}): Promise<Record<string, unknown>> {
+  return request("/api/v1/research/experiments", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+}
+
 export interface ResearchStats {
   total_analyses: number;
   completed_analyses: number;

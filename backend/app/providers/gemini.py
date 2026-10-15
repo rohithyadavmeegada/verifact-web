@@ -41,7 +41,11 @@ class GeminiClient:
             f"- key_facts: list of 2-3 verified factual assertions"
         )
 
-        url = f"{self.base_url}/{self.model}:generateContent?key={self.api_key}"
+        url = f"{self.base_url}/{self.model}:generateContent"
+        headers = {
+            "x-goog-api-key": self.api_key,
+            "Content-Type": "application/json",
+        }
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"responseMimeType": "application/json"}
@@ -49,7 +53,7 @@ class GeminiClient:
 
         try:
             async with httpx.AsyncClient(timeout=12.0) as client:
-                resp = await client.post(url, json=payload)
+                resp = await client.post(url, headers=headers, json=payload)
                 if resp.status_code == 200:
                     data = resp.json()
                     candidates = data.get("candidates", [])

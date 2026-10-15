@@ -4,9 +4,9 @@ Loads settings from environment variables with validation.
 """
 
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, field_validator
 
 
 class Settings(BaseSettings):
@@ -104,8 +104,22 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "json"
 
-    # ── CORS ─────────────────────────────────────────────────────────────────
     cors_origins: list[str] = ["http://localhost:3000"]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            if v.startswith("[") and v.endswith("]"):
+                import json
+                try:
+                    return json.loads(v)
+                except Exception:
+                    pass
+            return [x.strip() for x in v.split(",") if x.strip()]
+        elif isinstance(v, list):
+            return [str(x).strip() for x in v if str(x).strip()]
+        return ["http://localhost:3000"]
 
     def is_provider_configured(self, provider: str) -> bool:
         """Check if a provider has API credentials configured."""

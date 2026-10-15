@@ -219,19 +219,30 @@ class AnalysisService:
             text_score = round(text_score * 0.7 + provider_score * 0.3, 1)
 
         # 6. Calibrated Late Fusion
+        has_corroboration = bool(evidence_records or llm_verdict)
         fusion_out = late_fusion.fuse(
             text_score=text_score,
             evidence_score=evidence_score,
             social_score=social_score,
             vision_score=vision_score,
             text_confidence=text_conf,
-            evidence_confidence=0.85 if evidence_records else 0.5,
+            evidence_confidence=0.85 if evidence_records else 0.35,
         )
 
         trust_score = fusion_out["trust_score"]
         verdict = fusion_out["verdict"]
         confidence = fusion_out["confidence"]
         modality_weights = fusion_out["modality_weights"]
+
+        # Decision-support safety guardrail:
+        # Never claim a news item is conclusively reliable without corroborated external evidence or verified fact-checks
+        if not has_corroboration:
+            warnings.append(
+                "No external fact-checks or independent corroborated sources were found. "
+                "Output is decision-support only; verify with primary sources."
+            )
+            if verdict == VerdictCategory.LIKELY_RELIABLE:
+                verdict = VerdictCategory.UNVERIFIABLE
 
         # 7. Explainable AI (XAI) Synthesis
         explanation_data = xai_engine.generate_explanation(
@@ -302,199 +313,6 @@ class AnalysisService:
             created_at=analysis.created_at,
             completed_at=analysis.completed_at,
         )
-
-    async def _process_demo(
-        self, analysis: Analysis, start_time: float
-    ) -> AnalysisResponse:
-        """Generate deterministic demo results for demonstration purposes."""
-        import hashlib
-
-        claim = analysis.claim_text or analysis.source_url or ""
-        claim_hash = int(hashlib.md5(claim.encode()).hexdigest()[:8], 16)
-
-        # Deterministic but varied results based on claim content
-        base_score = 30 + (claim_hash % 60)  # 30-90 range
-        text_score = max(10, min(95, base_score + (claim_hash % 20 - 10)))
-        evidence_score = max(10, min(95, base_score + ((claim_hash >> 4) % 20 - 10)))
-
-        # Determine verdict based on score
-        if base_score >= 70:
-            verdict = VerdictCategory.LIKELY_RELIABLE
-        elif base_score >= 50:
-            verdict = VerdictCategory.UNVERIFIABLE
-        elif base_score >= 30:
-            verdict = VerdictCategory.INSUFFICIENT_EVIDENCE
-        else:
-            verdict = VerdictCategory.LIKELY_FALSE
-
-        confidence = round(0.4 + (claim_hash % 50) / 100, 2)
-
-        # Create demo evidence
-        demo_evidence = await self._create_demo_evidence(analysis, claim)
-
-        # Build modality results
-        text_result_data = {
-            "modality": "text",
-            "score": round(text_score, 1),
-            "confidence": round(confidence, 2),
-            "available": True,
-            "details": {
-                "nli_label": "entailment" if text_score > 60 else "neutral",
-                "entailment_score": round(text_score / 100, 3),
-                "contradiction_score": round((100 - text_score) / 200, 3),
-                "neutral_score": round((100 - text_score) / 200, 3),
-                "model": "demo-deberta-v3",
-                "note": "Demo mode — not a real model prediction",
-            },
-            "warnings": ["Demo mode: using deterministic sample results, not real AI inference"],
-        }
-
-        vision_result_data = None
-        if analysis.analysis_type == AnalysisType.IMAGE:
-            vision_score = max(10, min(95, base_score + ((claim_hash >> 8) % 20 - 10)))
-            vision_result_data = {
-                "modality": "vision",
-                "score": round(vision_score, 1),
-                "confidence": round(confidence * 0.9, 2),
-                "available": True,
-                "details": {
-                    "clip_similarity": round(0.3 + (claim_hash % 50) / 100, 3),
-                    "ela_anomaly_score": round(0.1 + (claim_hash % 30) / 100, 3),
-                    "ocr_text": "",
-                    "model": "demo-clip-vit",
-                    "note": "Demo mode — not a real model prediction",
-                },
-                "warnings": ["Demo mode: using deterministic sample results"],
-            }
-
-        explanation_data = {
-            "method": "demo",
-            "summary": f"This is a demo analysis. In real mode, the system uses DeBERTa-v3 NLI "
-                       f"to compare the claim against {len(demo_evidence)} retrieved evidence sources, "
-                       f"generating LIME token-level explanations and SHAP feature attributions.",
-            "modality_contributions": {
-                "text_nli": 0.45,
-                "evidence_retrieval": 0.35,
-                "vision": 0.15 if analysis.analysis_type == AnalysisType.IMAGE else 0.0,
-                "social": 0.05,
-            },
-            "limitations": [
-                "Demo mode — results are deterministic samples, not real AI predictions",
-                "No actual model inference was performed",
-                "Evidence sources are illustrative examples only",
-                "Do not cite these results in research — use real AI mode for genuine evaluation",
-            ],
-        }
-
-        # Update analysis record
-        elapsed_ms = int((time.time() - start_time) * 1000)
-        analysis.trust_score = round(base_score, 1)
-        analysis.verdict = verdict
-        analysis.confidence = confidence
-        analysis.is_calibrated = False
-        analysis.text_score = round(text_score, 1)
-        analysis.evidence_score = round(evidence_score, 1)
-        analysis.text_result = text_result_data
-        analysis.vision_result = vision_result_data
-        analysis.explanation = explanation_data
-        analysis.model_version = "demo-v1.0"
-        analysis.processing_time_ms = elapsed_ms
-        analysis.status = AnalysisStatus.COMPLETED
-        analysis.completed_at = datetime.now(timezone.utc)
-        analysis.warnings = [
-            "Demo mode: These results are deterministic samples for UI demonstration only."
-        ]
-
-        await self.db.flush()
-
-        # Build response
-        evidence_items = [
-            EvidenceItem(
-                id=str(e.id),
-                source_url=e.source_url,
-                source_name=e.source_name,
-                publisher=e.publisher,
-                title=e.title,
-                snippet=e.snippet,
-                published_at=e.published_at,
-                relation=e.relation.value if e.relation else None,
-                relevance_score=e.relevance_score,
-                is_fact_check=e.is_fact_check,
-            )
-            for e in demo_evidence
-        ]
-
-        return AnalysisResponse(
-            id=str(analysis.id),
-            analysis_type=analysis.analysis_type.value,
-            status=AnalysisStatus.COMPLETED.value,
-            is_demo=True,
-            claim_text=analysis.claim_text,
-            source_url=analysis.source_url,
-            caption=analysis.caption,
-            trust_score=analysis.trust_score,
-            verdict=verdict.value,
-            confidence=confidence,
-            is_calibrated=False,
-            text_result=ModalityResult(**text_result_data),
-            vision_result=ModalityResult(**vision_result_data) if vision_result_data else None,
-            evidence_items=evidence_items,
-            explanation=ExplanationData(**explanation_data),
-            model_version="demo-v1.0",
-            processing_time_ms=elapsed_ms,
-            warnings=analysis.warnings,
-            created_at=analysis.created_at,
-            completed_at=analysis.completed_at,
-        )
-
-    async def _create_demo_evidence(
-        self, analysis: Analysis, claim: str
-    ) -> list[Evidence]:
-        """Create illustrative demo evidence (clearly labelled as demo)."""
-        demo_sources = [
-            {
-                "source_name": "Demo Fact-Check Source",
-                "publisher": "VeriFact Demo",
-                "title": f"Demo: Analysis of claim related to '{claim[:50]}...'",
-                "snippet": "This is a demo evidence snippet. In real mode, this would contain actual "
-                          "text retrieved from fact-checking databases and news sources.",
-                "relation": EvidenceRelation.RELATED,
-                "relevance_score": 0.85,
-                "is_fact_check": True,
-                "retrieval_source": "demo",
-            },
-            {
-                "source_name": "Demo News Source",
-                "publisher": "VeriFact Demo",
-                "title": f"Demo: Related coverage of the topic",
-                "snippet": "This is a demo news evidence snippet. Real analysis would retrieve "
-                          "actual articles from configured news API providers.",
-                "relation": EvidenceRelation.NEUTRAL,
-                "relevance_score": 0.72,
-                "is_fact_check": False,
-                "retrieval_source": "demo",
-            },
-        ]
-
-        evidence_items = []
-        for src in demo_sources:
-            evidence = Evidence(
-                analysis_id=analysis.id,
-                source_url=None,
-                source_name=src["source_name"],
-                publisher=src["publisher"],
-                title=src["title"],
-                snippet=src["snippet"],
-                relation=src["relation"],
-                relevance_score=src["relevance_score"],
-                is_fact_check=src["is_fact_check"],
-                retrieval_source=src["retrieval_source"],
-            )
-            self.db.add(evidence)
-            evidence_items.append(evidence)
-
-        await self.db.flush()
-        return evidence_items
 
     async def _scrape_url(self, url: str) -> dict:
         """Fetch live web article and extract headline and snippet."""
