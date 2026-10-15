@@ -31,6 +31,7 @@ jobs:
       - name: Run test suite
         run: pytest tests/ -v --tb=short --asyncio-mode=strict
         env:
+          PYTHONPATH: .
           APP_ENV: testing
           APP_SECRET_KEY: ci-test-secret-key-minimum-32-chars-long
           DATABASE_URL: sqlite+aiosqlite:///./test_ci.db
