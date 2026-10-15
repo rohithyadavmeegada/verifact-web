@@ -2,6 +2,17 @@
   "name": "verifact-root",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "dependencies": {
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  },
   "scripts": {
     "dev": "npm run dev --prefix frontend",
     "build": "npm run build --prefix frontend",
