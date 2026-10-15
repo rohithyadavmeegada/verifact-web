@@ -1,6 +1,6 @@
 # VeriFact: Multimodal Deep Learning Framework for Real-Time, Explainable Fake News & Deepfake Detection
 
-[![CI](https://github.com/your-username/veriifact/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/veriifact/actions)
+[![CI](https://github.com/rohithyadavmeegada/verifact-web/actions/workflows/ci.yml/badge.svg)](https://github.com/rohithyadavmeegada/verifact-web/actions)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI_0.115+-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![Next.js 16](https://img.shields.io/badge/Frontend-Next.js_16_App_Router-000000.svg?logo=next.js&logoColor=white)](https://nextjs.org)
 [![Python](https://img.shields.io/badge/Python-3.9_|_3.11+-3776AB.svg?logo=python&logoColor=white)](https://python.org)
@@ -100,7 +100,7 @@ graph TD
 
 ### 1. Clone & Configuration
 ```bash
-git clone https://github.com/your-username/veriifact.git
+git clone https://github.com/rohithyadavmeegada/verifact-web.git
 cd veriifact
 
 # Copy environment configuration and fill in your API keys
@@ -252,7 +252,7 @@ Empirical performance on standardized academic benchmark datasets:
   title     = {VeriFact: A Multimodal Deep Learning Framework for Real-Time, Explainable Fake News and Deepfake Detection},
   year      = {2026},
   publisher = {GitHub},
-  howpublished = {\url{https://github.com/your-username/veriifact}}
+  howpublished = {\url{https://github.com/rohithyadavmeegada/verifact-web}}
 }
 ```
 
