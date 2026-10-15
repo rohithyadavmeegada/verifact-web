@@ -207,7 +207,7 @@ class AnalysisHistoryItem(BaseModel):
 # ── Feedback ─────────────────────────────────────────────────────────────────
 
 class FeedbackRequest(BaseModel):
-    analysis_id: str
+    analysis_id: str | None = None
     rating: int | None = Field(None, ge=1, le=5)
     is_correct: bool | None = None
     comment: str | None = Field(None, max_length=1000)

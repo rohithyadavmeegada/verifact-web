@@ -17,7 +17,7 @@ from sqlalchemy import select, desc, func
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.models import (
-    User, Analysis, AnalysisType, AnalysisStatus, Evidence, VerdictCategory
+    User, Analysis, AnalysisType, AnalysisStatus, Evidence, VerdictCategory, Feedback
 )
 from app.schemas.schemas import (
     TextAnalysisRequest,
@@ -242,6 +242,50 @@ async def get_analysis_status(
     )
 
 
+@router.post("/{analysis_id}/feedback", response_model=FeedbackResponse)
+async def submit_feedback(
+    analysis_id: str,
+    request: FeedbackRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Submit human feedback on an analysis verdict for late-fusion calibration."""
+    try:
+        aid = uuid.UUID(analysis_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid analysis ID format",
+        )
+
+    result = await db.execute(select(Analysis).where(Analysis.id == aid))
+    analysis = result.scalar_one_or_none()
+    if not analysis:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Analysis record not found",
+        )
+
+    feedback = Feedback(
+        user_id=user.id,
+        analysis_id=analysis.id,
+        rating=request.rating,
+        is_correct=request.is_correct,
+        comment=request.comment,
+    )
+    db.add(feedback)
+    await db.flush()
+
+    return FeedbackResponse(
+        id=str(feedback.id),
+        analysis_id=str(feedback.analysis_id),
+        rating=feedback.rating,
+        is_correct=feedback.is_correct,
+        comment=feedback.comment,
+        created_at=feedback.created_at or datetime.now(timezone.utc),
+    )
+
+
 def _build_analysis_response(
     analysis: Analysis, evidence_items: list[Evidence]
 ) -> AnalysisResponse:
@@ -263,15 +307,15 @@ def _build_analysis_response(
     ]
 
     text_result = None
-    if analysis.text_result:
+    if isinstance(analysis.text_result, dict):
         text_result = ModalityResult(**analysis.text_result)
 
     vision_result = None
-    if analysis.vision_result:
+    if isinstance(analysis.vision_result, dict):
         vision_result = ModalityResult(**analysis.vision_result)
 
     explanation = None
-    if analysis.explanation:
+    if isinstance(analysis.explanation, dict):
         explanation = ExplanationData(**analysis.explanation)
 
     return AnalysisResponse(

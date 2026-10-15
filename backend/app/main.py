@@ -49,7 +49,7 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
-@app.get("/api/docs", include_in_schema=False)
+@app.api_route("/api/docs", methods=["GET", "HEAD"], include_in_schema=False)
 async def api_docs_redirect():
     from fastapi.responses import RedirectResponse
     return RedirectResponse(url="/docs")

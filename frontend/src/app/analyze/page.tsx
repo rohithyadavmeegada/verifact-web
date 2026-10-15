@@ -29,6 +29,7 @@ import {
   analyzeUrl, 
   createGuestSession, 
   getStoredToken, 
+  submitFeedback,
   AnalysisRecord 
 } from "@/lib/api";
 
@@ -707,13 +708,29 @@ function AnalyzeContent() {
               ) : (
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => setFeedbackSent(true)}
+                    onClick={async () => {
+                      if (!result?.id) return;
+                      setFeedbackSent(true);
+                      try {
+                        await submitFeedback(result.id, true);
+                      } catch (err) {
+                        console.debug("Feedback error:", err);
+                      }
+                    }}
                     className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-200"
                   >
                     <ThumbsUp className="w-3.5 h-3.5 text-emerald-400" /> Accurate
                   </button>
                   <button
-                    onClick={() => setFeedbackSent(true)}
+                    onClick={async () => {
+                      if (!result?.id) return;
+                      setFeedbackSent(true);
+                      try {
+                        await submitFeedback(result.id, false);
+                      } catch (err) {
+                        console.debug("Feedback error:", err);
+                      }
+                    }}
                     className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-medium text-slate-200"
                   >
                     <ThumbsDown className="w-3.5 h-3.5 text-rose-400" /> Inaccurate

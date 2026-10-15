@@ -211,6 +211,18 @@ export async function getAnalysis(id: string): Promise<AnalysisRecord> {
   return request<AnalysisRecord>(`/api/v1/analyze/${id}`);
 }
 
+export async function submitFeedback(
+  analysisId: string,
+  isCorrect?: boolean,
+  rating?: number,
+  comment?: string
+): Promise<{ id: string }> {
+  return request<{ id: string }>(`/api/v1/analyze/${analysisId}/feedback`, {
+    method: "POST",
+    body: JSON.stringify({ is_correct: isCorrect, rating, comment }),
+  });
+}
+
 export interface HistoryItem {
   id: string;
   analysis_type: string;
